@@ -1,8 +1,10 @@
-﻿namespace Task1
+﻿using NUnit.Framework.Constraints;
+
+namespace Task1
 {
     // Необходимо заменить на более подходящий тип (коллекцию), позволяющий
     // эффективно искать диапазон по заданному IP-адресу
-    using IPRangesDatabase = Object;
+    using IPRangesDatabase = List<Task1.IPRange>;
 
     public class Task1
     {
@@ -11,13 +13,20 @@
         * ещё и целочисленное значение соответствующего адреса. Например, для адреса
          * 127.0.0.1 должно храниться число 1 + 0 * 2^8 + 0 * 2^16 + 127 * 2^24 = 2130706433.
         */
-        internal record IPv4Addr (string StrValue) : IComparable<IPv4Addr>
+        internal record IPv4Addr(string StrValue) : IComparable<IPv4Addr>
         {
-            internal uint IntValue = Ipstr2Int();
+            internal uint IntValue = Ipstr2Int(StrValue);
 
-            private static uint Ipstr2Int()
+            private static uint Ipstr2Int(string strValue)
             {
-                throw new NotImplementedException();
+                uint intValue = 0;
+                String[] strList = strValue.Split('.').Reverse().ToArray();
+                for (int i = 0; i < strList.Length; ++i)
+                {
+                    intValue += (uint)Int32.Parse(strList[i]) * (uint)Math.Pow(256, i);
+                }
+
+                return intValue;
             }
 
             // Благодаря этому методу мы можем сравнивать два значения IPv4Addr
@@ -41,24 +50,70 @@
         }
 
         internal record class IPLookupArgs(string IpsFile, List<string> IprsFiles);
-       
+
         internal static IPLookupArgs? ParseArgs(string[] args)
         {
-            throw new NotImplementedException();
+            if (args.Length < 2)
+            {
+                return null;
+            }
+
+            string ipsFile = args[0];
+            List<string> iprsFiles = new List<string>();
+            for (int i = 1; i < args.Length; ++i)
+                iprsFiles.Add(args[i].TrimStart().TrimEnd());
+            return new IPLookupArgs(ipsFile, iprsFiles);
         }
 
-        internal static List<string> LoadQuery(string filename) {
-            throw new NotImplementedException();
+        internal static List<IPv4Addr> LoadQuery(string filename)
+        {
+            List<IPv4Addr> query = new List<IPv4Addr>();
+            using (StreamReader reader = new StreamReader(filename))
+            {
+                string? line = reader.ReadLine();
+                while (line != null)
+                {
+                    query.Add(new IPv4Addr(line));
+                    line = reader.ReadLine();
+                }
+            }
+
+            return query;
         }
 
-        internal static IPRangesDatabase LoadRanges(List<String> filenames) {
-            throw new NotImplementedException();
+        internal static IPRangesDatabase LoadRanges(List<String> filenames)
+        {
+            IPRangesDatabase query = new List<IPRange>();
+            foreach (string filename in filenames)
+            {
+                StreamReader reader = new StreamReader(filename);
+                string? line = reader.ReadLine();
+                while (line != null)
+                {
+                    String[] range = line.Split(',');
+                    var from = new IPv4Addr(range[0]);
+                    var to = new IPv4Addr(range[1]);
+                    query.Add(new IPRange(from, to));
+                    line = reader.ReadLine();
+                }
+            }
+
+            return query;
         }
 
-        internal static IPRange? FindRange(IPRangesDatabase ranges, IPv4Addr query) {
-            throw new NotImplementedException();
+        internal static IPRange? FindRange(IPRangesDatabase ranges, IPv4Addr addr)
+        {
+            foreach (var range in ranges)
+            {
+                if (range.IpFrom.CompareTo(addr) < 0 && addr.CompareTo(range.IpTo) < 0)
+                {
+                    return range;
+                }
+            }
+
+            return null;
         }
-        
+
         public static void Main(string[] args)
         {
             var ipLookupArgs = ParseArgs(args);
@@ -68,18 +123,17 @@
             }
 
             var queries = LoadQuery(ipLookupArgs.IpsFile);
-                var ranges = LoadRanges(ipLookupArgs.IprsFiles);
+            var ranges = LoadRanges(ipLookupArgs.IprsFiles);
+            using (StreamWriter writer = new StreamWriter(ipLookupArgs.IpsFile.Replace(".ips", ".out"), true))
+            {
                 foreach (var ip in queries)
                 {
-                    var findRange = FindRange(ranges, new IPv4Addr(ip));
-                    var result = TODO<string>();
-                    Console.WriteLine($"{ip}: {result}");
+                    var findRange = FindRange(ranges, ip);
+                    var result = "NO";
+                    if (findRange != null) result = $"YES ({findRange.ToString()})";
+                    writer.WriteLine($"{ip}: {result}");
                 }
-        }
-        
-        private static T TODO<T>()
-        {
-            throw new NotImplementedException();
+            }
         }
     }
 }

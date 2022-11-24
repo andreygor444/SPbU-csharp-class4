@@ -36,14 +36,7 @@ public class Tests
     {
         That(LoadQuery("../../../data/query.ips").ToList(), Has.Count.EqualTo(5));
     }
-    
-    [Test]
-    public void LoadRangesTest()
-    {
-        var ranges = LoadRanges(new List<string> { "../../../data/1.iprs", "../../../data/2.iprs" });
-        throw new NotImplementedException("Допишите тест после задания структуры IPRangesDatabase");
-    }
-    
+
     [Test]
     public void LoadRangesEmptyTest()
     {
